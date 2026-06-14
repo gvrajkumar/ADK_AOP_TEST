@@ -519,6 +519,7 @@
         <nav>
             <a href="#overview" class="active" id="nav-overview">Overview</a>
             <a href="#core-concepts" id="nav-core-concepts">Core Concepts</a>
+            <a href="#sop-design" id="nav-sop-design">SOP Lifecycle</a>
             <a href="#guardrails" id="nav-guardrails">Guardrails & Telemetry</a>
             <a href="#architecture" id="nav-architecture">Architecture</a>
             <a href="#decoupled-bindings" id="nav-decoupled-bindings">Bindings Registry</a>
@@ -623,6 +624,46 @@
                         <li><strong>Dynamic Binder Engine:</strong> Maps abstract YAML steps (like <code>freeze_card</code>) to concrete technical APIs (like <code>lob_debit_card_freeze</code>) at runtime, translating parameters on-the-fly.</li>
                         <li><strong>Cognitive Delegation:</strong> For diagnostic steps, it instantiates an isolated ADK <code>Agent</code> (running on <code>gpt-5.5</code>) via the <code>Runner</code> and restricts its tools to the skill's <code>allowed-tools</code>.</li>
                         <li><strong>Compensation & Rollback:</strong> Guarantees transactional integrity. If any step fails, the Harness executes rollback steps in reverse sequence (e.g. unfreezing a card on replacement dispatch failure).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1.6: SOP Lifecycle & Parameter Decoupling -->
+        <section id="sop-design">
+            <h2>SOP Conversion &amp; Bindings Design</h2>
+            <p>
+                A core challenge of agentic automation is converting raw human SOP documents into executable structures, and passing parameters between the Knowledge Management (KM) and Line of Business (LOB) layers without introducing tight coupling.
+            </p>
+
+            <div class="grid-cards">
+                <div class="card" style="border-color: rgba(139, 92, 246, 0.25);">
+                    <div class="card-header">
+                        <div class="card-icon icon-km">🔄</div>
+                        <h3>SOP ➔ Agentic SOP Conversion</h3>
+                    </div>
+                    <p>
+                        Raw prose (Confluence, Wiki, PDF) is compiled into structured formats via a parsed LLM pipeline.
+                    </p>
+                    <ul style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <li><strong>Prose Ingestion:</strong> Chunked text is parsed using structured extraction.</li>
+                        <li><strong>Human-Readable SOP (Markdown):</strong> Emitted as <code>SKILL.md</code>, declaring the allowed-tools contract and preconditions in natural language.</li>
+                        <li><strong>Agentic SOP (YAML):</strong> Emitted as <code>assets/workflow.yaml</code>, containing state transition routes, execution actions, and telemetry parameters.</li>
+                    </ul>
+                </div>
+
+                <div class="card" style="border-color: rgba(16, 185, 129, 0.25);">
+                    <div class="card-header">
+                        <div class="card-icon icon-lob">🔗</div>
+                        <h3>Decoupled Input Bindings</h3>
+                    </div>
+                    <p>
+                        KM and LOB layers communicate through abstract parameter bridges, keeping backend developments completely insulated.
+                    </p>
+                    <ul style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <li><strong>Abstract Mapping:</strong> KM specifies abstract concepts (e.g. <code>card_id</code>). LOB defines backend arguments (e.g. <code>card_num</code>) and links them via <code>param_mapping</code>.</li>
+                        <li><strong>Default Args Injection:</strong> LOB configures missing variables (like <code>reason_code: LOST_STOLEN_REPORT</code>) inside the registry bindings dynamically.</li>
+                        <li><strong>Context &amp; Internal Enrichment:</strong> LOB functions query local databases (like querying <code>branch_id</code> using <code>customer_id</code>) to resolve complex arguments internally.</li>
                     </ul>
                 </div>
             </div>
