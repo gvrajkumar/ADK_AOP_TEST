@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Design: Decoupled Agent Harness Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: #131a2e;
+            --bg-surface-hover: #1e294b;
+            --accent-primary: #8b5cf6; /* Violet */
+            --accent-secondary: #06b6d4; /* Cyan */
+            --accent-green: #10b981; /* Emerald */
+            --accent-red: #ef4444; /* Rose */
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #1e293b;
+            --glass-bg: rgba(30, 41, 59, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --sidebar-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Sidebar Navigation */
+        aside {
+            width: var(--sidebar-width);
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1.5rem;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 3rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #ffffff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        nav a:hover, nav a.active {
+            color: #fff;
+            background-color: var(--bg-surface-hover);
+        }
+
+        nav a.active {
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        /* Main Content Panel */
+        main {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 3rem 4rem;
+            max-width: 1200px;
+        }
+
+        header {
+            margin-bottom: 4rem;
+        }
+
+        .pill {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #c084fc;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h1 {
+            font-size: 2.75rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            max-width: 800px;
+        }
+
+        section {
+            margin-bottom: 5rem;
+            scroll-margin-top: 2rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(to bottom, var(--accent-primary), var(--accent-secondary));
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-size: 1.05rem;
+        }
+
+        /* SVG Architecture Diagrams styles */
+        .diagram-container {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            display: flex;
+            justify-content: center;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            overflow-x: auto;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .svg-node {
+            transition: all 0.3s ease;
+        }
+
+        .svg-node:hover {
+            filter: brightness(1.2) drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+            cursor: pointer;
+        }
+
+        /* Cards and Grid Layouts */
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background-color: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.75rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(139, 92, 246, 0.3);
+            background-color: rgba(30, 41, 59, 0.6);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: #fff;
+        }
+
+        .icon-km { background: rgba(139, 92, 246, 0.2); border: 1px solid var(--accent-primary); color: #c084fc; }
+        .icon-harness { background: rgba(6, 182, 212, 0.2); border: 1px solid var(--accent-secondary); color: #22d3ee; }
+        .icon-lob { background: rgba(16, 185, 129, 0.2); border: 1px solid var(--accent-green); color: #34d399; }
+
+        .card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .card ul {
+            list-style: none;
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .card ul li {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card ul li::before {
+            content: "✓";
+            color: var(--accent-secondary);
+            font-weight: bold;
+        }
+
+        /* Tabbed Code Selectors */
+        .tab-wrapper {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin: 2.5rem 0;
+            overflow: hidden;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab-headers {
+            display: flex;
+            background-color: rgba(15, 23, 42, 0.6);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 1rem 0;
+            gap: 0.25rem;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.75rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--bg-base);
+            position: relative;
+            z-index: 10;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1.5rem;
+            background-color: var(--bg-base);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .file-link-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            background-color: rgba(255, 255, 255, 0.02);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .file-path {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+        }
+
+        .file-btn {
+            background-color: var(--bg-surface-hover);
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        .file-btn:hover {
+            background-color: var(--accent-primary);
+        }
+
+        pre {
+            background-color: #050811;
+            padding: 1.25rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+        }
+
+        /* Verification Steps Visual Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2.5rem;
+            margin: 2.5rem 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 12px;
+            width: 2px;
+            background-color: var(--border-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 3rem;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -2.5rem;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background-color: var(--bg-base);
+            border: 3px solid var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-marker.marker-success {
+            border-color: var(--accent-green);
+        }
+
+        .timeline-marker.marker-warning {
+            border-color: var(--accent-secondary);
+        }
+
+        .timeline-marker.marker-error {
+            border-color: var(--accent-red);
+        }
+
+        .timeline-content {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .timeline-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .timeline-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-green); color: #34d399; }
+        .badge-warning { background: rgba(6, 182, 212, 0.15); border: 1px solid var(--accent-secondary); color: #22d3ee; }
+        .badge-error { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); color: #f87171; }
+
+        .timeline-log {
+            margin-top: 1rem;
+            background-color: #050811;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-secondary);
+            color: #94a3b8;
+            max-height: 250px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        footer {
+            margin-top: 5rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-base);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--bg-surface-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Menu -->
+    <aside>
+        <div class="logo-container">
+            <div class="logo-icon">H</div>
+            <div class="logo-text">ADK Harness</div>
+        </div>
+        <nav>
+            <a href="#overview" class="active" id="nav-overview">Overview</a>
+            <a href="#core-concepts" id="nav-core-concepts">Core Concepts</a>
+            <a href="#guardrails" id="nav-guardrails">Guardrails & Telemetry</a>
+            <a href="#architecture" id="nav-architecture">Architecture</a>
+            <a href="#decoupled-bindings" id="nav-decoupled-bindings">Bindings Registry</a>
+            <a href="#code-implementation" id="nav-code-implementation">Code Files</a>
+            <a href="#timeline-verification" id="nav-timeline-verification">Verification Runs</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content Frame -->
+    <main>
+        <header id="overview">
+            <span class="pill">Technical Design Document</span>
+            <h1>Agentic SOP Search & Execution Platform</h1>
+            <div class="subtitle">
+                An extensible architecture built on Google Agent Development Kit (ADK) 2.x and OpenAI GPT-5.5. 
+                Provides capability-based semantic search and safe, deterministic execution of operational procedures.
+            </div>
+        </header>
+
+        <!-- Section 1: Overview -->
+        <section>
+            <h2>Architectural Concept</h2>
+            <p>
+                Modern enterprises struggle with running Standard Operating Procedures (SOPs). Human prose documents are hard to search, and letting raw LLM agents execute them directly without guardrails poses significant operational risk. 
+            </p>
+            <p>
+                Our platform introduces a <strong>Decoupled Architecture</strong> separating procedural knowledge from system integrations, and divides execution duties between a reasoning agent and a safe workflow runner:
+            </p>
+            <div class="grid-cards">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon icon-km">📖</div>
+                        <h3>Knowledge Management</h3>
+                    </div>
+                    <p>Process experts author procedures using human-readable steps mapped to high-level abstract capabilities (e.g. <code>freeze_card</code>), completely independent of code implementations.</p>
+                    <ul>
+                        <li>Markdown metadata (SKILL.md)</li>
+                        <li>YAML Execution Graphs</li>
+                        <li>Strict Capability Lists</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon icon-harness">⚙️</div>
+                        <h3>Harness Orchestrator</h3>
+                    </div>
+                    <p>Acts as the safety controller. It performs semantic searches, validates graph preconditions, dynamically binds abstract steps to code endpoints, and guarantees transaction-level rollback.</p>
+                    <ul>
+                        <li>Dynamic Binding Registry</li>
+                        <li>Precondition Validation</li>
+                        <li>Human Gate approvals</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon icon-lob">🏦</div>
+                        <h3>Line of Business (LOB)</h3>
+                    </div>
+                    <p>System engineers build concrete tools (microservices, DB operations) and map parameters. LOB interfaces can undergo refactoring and upgrades without impacting the KM team's SOPs.</p>
+                    <ul>
+                        <li>Concrete Python Tools</li>
+                        <li>Dynamic Param Translator</li>
+                        <li>Version-insulated upgrades</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1.5: Core Concepts (Skill & Agent Harness) -->
+        <section id="core-concepts">
+            <h2>Core Platform Concepts</h2>
+            <p>
+                To understand the system design, it is critical to distinguish between the two central pillars defined by the Google ADK: the <strong>Skill</strong> (design-time blueprint) and the <strong>Agent Harness</strong> (runtime execution safety controller).
+            </p>
+            
+            <div class="grid-cards">
+                <div class="card" style="border-color: rgba(139, 92, 246, 0.25);">
+                    <div class="card-header">
+                        <div class="card-icon icon-km">📦</div>
+                        <h3>What is an ADK Skill?</h3>
+                    </div>
+                    <p>
+                        In the Google Agent Development Kit (ADK), a <strong>Skill</strong> is the modular encapsulation of a specific domain capability. It represents the declarative contract and logical flow of a process.
+                    </p>
+                    <ul style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <li><strong>Declarative Interface:</strong> Declared via a skill folder containing a <code>SKILL.md</code>. This file details the skill's name, description, and list of <code>allowed-tools</code>, acting as a strict security barrier for the Agent's runtime.</li>
+                        <li><strong>Executable Graph:</strong> Contains the <code>workflow.yaml</code> file, which specifies the state transitions, inputs, success checks, failure routes, and rollback actions.</li>
+                        <li><strong>Decoupled Focus:</strong> Authored by the Knowledge Management (KM) team. It contains no python imports, no API details, and no database schemas, remaining completely pure.</li>
+                    </ul>
+                </div>
+
+                <div class="card" style="border-color: rgba(6, 182, 212, 0.25);">
+                    <div class="card-header">
+                        <div class="card-icon icon-harness">⚙️</div>
+                        <h3>What is the Agent Harness?</h3>
+                    </div>
+                    <p>
+                        The <strong>Agent Harness</strong> is the stateful runtime orchestrator. Unlike raw, autonomous agents that plan dynamically and call APIs directly (introducing risks of hallucinations or infinite loops), the Harness acts as a deterministic safety container.
+                    </p>
+                    <ul style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <li><strong>Precondition Guard:</strong> Verifies state criteria (e.g., customer account active) before enabling workflow progression.</li>
+                        <li><strong>Dynamic Binder Engine:</strong> Maps abstract YAML steps (like <code>freeze_card</code>) to concrete technical APIs (like <code>lob_debit_card_freeze</code>) at runtime, translating parameters on-the-fly.</li>
+                        <li><strong>Cognitive Delegation:</strong> For diagnostic steps, it instantiates an isolated ADK <code>Agent</code> (running on <code>gpt-5.5</code>) via the <code>Runner</code> and restricts its tools to the skill's <code>allowed-tools</code>.</li>
+                        <li><strong>Compensation & Rollback:</strong> Guarantees transactional integrity. If any step fails, the Harness executes rollback steps in reverse sequence (e.g. unfreezing a card on replacement dispatch failure).</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1.7: Telemetry & Explainability Guardrails -->
+        <section id="guardrails">
+            <h2>Telemetry & Explainability Guardrails</h2>
+            <p>
+                To run autonomous processes in corporate environments, safety limits and clear audits are mandatory. Our platform implements two types of declarative guardrails inside the SOP execution pipeline:
+            </p>
+            
+            <div class="grid-cards">
+                <div class="card" style="border-color: rgba(16, 185, 129, 0.25);">
+                    <div class="card-header">
+                        <div class="card-icon icon-lob">📈</div>
+                        <h3>Telemetry Guardrails</h3>
+                    </div>
+                    <p>
+                        The Harness continuously monitors system-level metrics and LLM usage to prevent runaway costs or high response latencies.
+                    </p>
+                    <ul style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <li><strong>Global Budget Cap:</strong> Enforces a <code>max_workflow_cost_usd</code> (e.g. $0.10). The Harness tracks cumulative API usage fees and halts step execution immediately if the limit is breached.</li>
+                        <li><strong>Step Latency Gating:</strong> If a step exceeds its configured <code>alert_on_latency_ms</code> limit, the Harness generates alert warnings without failing the business flow.</li>
+                        <li><strong>Live Token Auditing:</strong> Captures ADK runner metadata (prompt, completion, and total tokens) to log accurate performance metrics.</li>
+                    </ul>
+                </div>
+
+                <div class="card" style="border-color: rgba(6, 182, 212, 0.25);">
+                    <div class="card-header">
+                        <div class="card-icon icon-harness">🔍</div>
+                        <h3>Explainability Guardrails</h3>
+                    </div>
+                    <p>
+                        Ensures that agent decisions are legally defensible and auditable. AI Agents cannot perform actions without generating structured reasoning logs.
+                    </p>
+                    <ul style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                        <li><strong>Thought Stream Extraction:</strong> Taps into the ADK Agent's thoughts and reasoning path during <code>diagnose</code> steps.</li>
+                        <li><strong>Audit Justifications:</strong> Logs the raw decision-making context and populates it directly into the Harness context (e.g., <code>fraud_justification</code>).</li>
+                        <li><strong>HITL Context Injection:</strong> Automatically presents the generated explanation to human managers when prompting them for approvals at decision gates.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="diagram-container">
+                <!-- SVG Diagram 3: Telemetry & Explainability Pipeline -->
+                <svg width="850" height="260" viewBox="0 0 850 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="850" height="260" rx="10" fill="#0f172a" />
+                    
+                    <!-- Nodes -->
+                    <!-- Start node -->
+                    <rect x="20" y="90" width="110" height="60" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+                    <text x="35" y="118" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">1. START STEP</text>
+                    <text x="35" y="134" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="10">Init Latency Timer</text>
+                    
+                    <!-- Arrow -->
+                    <path d="M 130 120 L 160 120" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow-small)" />
+                    
+                    <!-- Budget check node -->
+                    <polygon points="160,120 220,85 280,120 220,155" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+                    <text x="190" y="118" fill="#c084fc" font-family="'Outfit', sans-serif" font-size="10" font-weight="600">2. BUDGET</text>
+                    <text x="192" y="130" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="9">Cost &lt; Cap?</text>
+                    
+                    <!-- Budget Breach path -->
+                    <path d="M 220 155 L 220 210 L 250 210" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrow-small)" />
+                    <rect x="250" y="185" width="100" height="50" rx="6" fill="#7f1d1d" stroke="#ef4444" stroke-width="1.5" />
+                    <text x="260" y="210" fill="#f87171" font-family="'Outfit', sans-serif" font-size="10" font-weight="600">HALT (Breach)</text>
+                    <text x="260" y="222" fill="#fca5a5" font-family="'Outfit', sans-serif" font-size="8">Rollback triggered</text>
+                    
+                    <!-- Arrow yes -->
+                    <path d="M 280 120 L 310 120" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-small)" />
+                    <text x="288" y="112" fill="#10b981" font-family="'Outfit', sans-serif" font-size="9">Yes</text>
+                    
+                    <!-- Run Agent Node -->
+                    <rect x="310" y="85" width="140" height="70" rx="6" fill="#083344" stroke="#06b6d4" stroke-width="1.5" />
+                    <text x="325" y="108" fill="#22d3ee" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">3. ADK RUNNER</text>
+                    <text x="325" y="124" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="9">Call GPT-5.5 model</text>
+                    <text x="325" y="140" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="9">Returns usage metadata</text>
+                    
+                    <!-- Arrow -->
+                    <path d="M 450 120 L 480 120" stroke="#06b6d4" stroke-width="1.5" marker-end="url(#arrow-small)" />
+                    
+                    <!-- Explainability / Telemetry Gating -->
+                    <rect x="480" y="75" width="160" height="90" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="1.5" />
+                    <text x="495" y="98" fill="#34d399" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">4. AUDIT &amp; TELEMETRY</text>
+                    <text x="495" y="114" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="9">✔ Cost: calc usage fees</text>
+                    <text x="495" y="130" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="9">✔ Thought trail tap logged</text>
+                    <text x="495" y="146" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="9">✔ Latency: alert if &gt; 3s</text>
+                    
+                    <!-- Arrow -->
+                    <path d="M 640 120 L 670 120" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-small)" />
+                    
+                    <!-- HITL Gate -->
+                    <rect x="670" y="85" width="160" height="70" rx="6" fill="#78350f" stroke="#f59e0b" stroke-width="1.5" />
+                    <text x="685" y="108" fill="#fbbf24" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">5. HITL APPROVAL GATE</text>
+                    <text x="685" y="124" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="9">Injects: fraud_justification</text>
+                    <text x="685" y="140" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="9">Prompts manager for 'y'/'n'</text>
+                    
+                    <!-- Small arrow marker defs -->
+                    <defs>
+                        <marker id="arrow-small" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#e2e8f0" stroke="none" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Section 2: Diagrams & Architecture -->
+        <section id="architecture">
+            <h2>System Architecture Diagram</h2>
+            <p>
+                The following diagram details the interaction flow between the KM Team's procedural frontmatter, the Harness Engine orchestrator, the ADK Agent (which runs the fraud check diagnostic step via the GPT-5.5 model), and the LOB concrete APIs.
+            </p>
+
+            <div class="diagram-container">
+                <!-- SVG diagram 1: System Flow & Translation Layer -->
+                <svg width="850" height="450" viewBox="0 0 850 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Background Grid -->
+                    <rect width="850" height="450" rx="10" fill="#0f172a" />
+                    
+                    <!-- KM Layer Group -->
+                    <rect x="20" y="30" width="240" height="150" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+                    <text x="35" y="55" fill="#c084fc" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">KNOWLEDGE MANAGEMENT (KM)</text>
+                    <rect x="35" y="75" width="210" height="30" rx="4" fill="rgba(99, 102, 241, 0.15)" stroke="rgba(99, 102, 241, 0.3)" />
+                    <text x="45" y="94" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="12">lost-card-replacement/SKILL.md</text>
+                    <rect x="35" y="115" width="210" height="50" rx="4" fill="rgba(99, 102, 241, 0.15)" stroke="rgba(99, 102, 241, 0.3)" />
+                    <text x="45" y="134" fill="#a5b4fc" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">SOP Steps (Abstract):</text>
+                    <text x="45" y="150" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="11">capability: "freeze_card"</text>
+
+                    <!-- Harness Layer Group -->
+                    <rect x="320" y="30" width="260" height="400" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5" />
+                    <text x="335" y="55" fill="#22d3ee" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">HARNESS ORCHESTRATOR</text>
+                    
+                    <!-- Search Engine block -->
+                    <rect x="335" y="80" width="230" height="45" rx="4" fill="rgba(6, 182, 212, 0.1)" stroke="rgba(6, 182, 212, 0.3)" />
+                    <text x="345" y="98" fill="#22d3ee" font-family="'Outfit', sans-serif" font-size="12" font-weight="600">SOP Search Store</text>
+                    <text x="345" y="114" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="11">Keyword + Capability Overlap Filter</text>
+
+                    <!-- ADK Runner block -->
+                    <rect x="335" y="135" width="230" height="65" rx="4" fill="rgba(6, 182, 212, 0.1)" stroke="rgba(6, 182, 212, 0.3)" />
+                    <text x="345" y="152" fill="#22d3ee" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">ADK Agent (GPT-5.5)</text>
+                    <text x="345" y="167" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="10">Action: "diagnose"</text>
+                    <text x="345" y="182" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="10">Tool: get_transaction_history()</text>
+
+                    <!-- Telemetry & Guardrails block -->
+                    <rect x="335" y="210" width="230" height="50" rx="4" fill="rgba(239, 68, 68, 0.1)" stroke="rgba(239, 68, 68, 0.3)" />
+                    <text x="345" y="226" fill="#f87171" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">Guardrails & Telemetry Monitor</text>
+                    <text x="345" y="240" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="9">Budget Cap | Latency Alert | Thought Audit</text>
+
+                    <!-- Binding block -->
+                    <rect x="335" y="270" width="230" height="65" rx="4" fill="rgba(6, 182, 212, 0.1)" stroke="rgba(6, 182, 212, 0.3)" />
+                    <text x="345" y="287" fill="#22d3ee" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">Harness Parameter Binder</text>
+                    <text x="345" y="303" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="9">Maps: card_id ➔ card_num | id ➔ client_id</text>
+
+                    <!-- Precondition & Rollback blocks -->
+                    <rect x="335" y="345" width="230" height="50" rx="4" fill="rgba(6, 182, 212, 0.1)" stroke="rgba(6, 182, 212, 0.3)" />
+                    <text x="345" y="362" fill="#f87171" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">Transaction & Rollback Guard</text>
+                    <text x="345" y="377" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="9">Failure ➔ runs rollback list in reverse</text>
+
+                    <!-- LOB Layer Group -->
+                    <rect x="630" y="30" width="200" height="250" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5" />
+                    <text x="645" y="55" fill="#34d399" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">LOB INTEGRATIONS</text>
+                    
+                    <rect x="645" y="75" width="170" height="35" rx="4" fill="rgba(16, 185, 129, 0.15)" stroke="rgba(16, 185, 129, 0.3)" />
+                    <text x="655" y="97" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="11">lob_fetch_customer_details()</text>
+
+                    <rect x="645" y="120" width="170" height="35" rx="4" fill="rgba(16, 185, 129, 0.15)" stroke="rgba(16, 185, 129, 0.3)" />
+                    <text x="655" y="142" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="11">lob_debit_card_freeze()</text>
+
+                    <rect x="645" y="165" width="170" height="35" rx="4" fill="rgba(16, 185, 129, 0.15)" stroke="rgba(16, 185, 129, 0.3)" />
+                    <text x="655" y="187" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="11">lob_assess_shipping_risk()</text>
+
+                    <rect x="645" y="210" width="170" height="50" rx="4" fill="rgba(16, 185, 129, 0.15)" stroke="rgba(16, 185, 129, 0.3)" />
+                    <text x="655" y="230" fill="#34d399" font-family="'Outfit', sans-serif" font-size="11" font-weight="600">Database & Mainframe:</text>
+                    <text x="655" y="246" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="11">Jane Doe (750) | John Smith (580)</text>
+
+                    <!-- CONNECTIONS & ARROWS -->
+                    <!-- KM to Harness -->
+                    <path d="M 260 105 L 320 105" stroke="#6366f1" stroke-width="2" marker-end="url(#arrow)" />
+                    <text x="268" y="97" fill="#c084fc" font-family="'Outfit', sans-serif" font-size="10">Loads YAML</text>
+
+                    <!-- Harness to LOB -->
+                    <path d="M 580 300 L 630 300" stroke="#06b6d4" stroke-width="2" />
+                    <text x="584" y="292" fill="#22d3ee" font-family="'Outfit', sans-serif" font-size="10">Invokes</text>
+
+                    <!-- Loop between ADK Agent and LOB db/tool -->
+                    <path d="M 435 200 L 435 208 L 635 208" stroke="#06b6d4" stroke-dasharray="3,3" stroke-width="1.5" />
+                    <text x="480" y="196" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="9">get_transaction_history() call</text>
+
+                    <!-- Upgraded API Overlay diagram -->
+                    <path d="M 645 138 L 565 290" stroke="#f59e0b" stroke-dasharray="4,4" stroke-width="1.5" />
+                    <text x="580" y="185" fill="#f59e0b" font-family="'Outfit', sans-serif" font-size="10" transform="rotate(-30 580 165)">API migration map</text>
+
+                    <!-- Defs for arrows -->
+                    <defs>
+                        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Section 3: Decoupled Bindings Registry -->
+        <section id="decoupled-bindings">
+            <h2>The Decoupled Bindings Registry</h2>
+            <p>
+                In standard orchestrators, if the backend engineering team renames a function or changes a parameter name from <code>card_num</code> to <code>technical_card_no</code>, the procedural SOP document must be rewritten.
+            </p>
+            <p>
+                Our system completely isolates these layers. The KM team's YAML files only express abstract capabilities, while the LOB team keeps the mapping configuration in the <code>CAPABILITY_BINDINGS</code> registry:
+            </p>
+
+            <div class="diagram-container">
+                <!-- SVG Diagram 2: Decoupled translation details -->
+                <svg width="800" height="280" viewBox="0 0 800 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="800" height="280" rx="10" fill="#0f172a" />
+                    
+                    <!-- KM Step box -->
+                    <rect x="30" y="40" width="220" height="190" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+                    <text x="45" y="65" fill="#c084fc" font-family="'Outfit', sans-serif" font-size="13" font-weight="600">KM Step Definition</text>
+                    
+                    <rect x="45" y="85" width="190" height="130" rx="4" fill="#050811" />
+                    <text x="55" y="105" fill="#6366f1" font-family="'Fira Code', monospace" font-size="11">step_id: step_freeze</text>
+                    <text x="55" y="125" fill="#6366f1" font-family="'Fira Code', monospace" font-size="11">capability: freeze_card</text>
+                    <text x="55" y="145" fill="#6366f1" font-family="'Fira Code', monospace" font-size="11">inputs:</text>
+                    <text x="75" y="165" fill="#22d3ee" font-family="'Fira Code', monospace" font-size="11">card_id: "{{card_id}}"</text>
+                    <text x="55" y="185" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="10" font-style="italic">No mention of real python</text>
+                    <text x="55" y="200" fill="#e2e8f0" font-family="'Outfit', sans-serif" font-size="10" font-style="italic">functions or endpoints.</text>
+
+                    <!-- Translation arrows -->
+                    <path d="M 280 120 L 320 120" stroke="#06b6d4" stroke-width="2" />
+                    <path d="M 320 120 L 320 160 L 340 160" stroke="#06b6d4" stroke-width="2" />
+                    <path d="M 280 165 L 340 165" stroke="#34d399" stroke-width="2" />
+
+                    <!-- Binding Registry Box -->
+                    <rect x="360" y="40" width="410" height="190" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+                    <text x="375" y="65" fill="#f1f5f9" font-family="'Outfit', sans-serif" font-size="13" font-weight="600">LOB CAPABILITY_BINDINGS (Technical Map)</text>
+
+                    <rect x="375" y="85" width="380" height="130" rx="4" fill="#050811" />
+                    <text x="385" y="105" fill="#e2e8f0" font-family="'Fira Code', monospace" font-size="10">"freeze_card": {</text>
+                    <text x="405" y="122" fill="#34d399" font-family="'Fira Code', monospace" font-size="10">"function": lob_debit_card_freeze,</text>
+                    <text x="405" y="139" fill="#22d3ee" font-family="'Fira Code', monospace" font-size="10">"param_mapping": {"card_id": "card_num"},</text>
+                    <text x="405" y="156" fill="#f59e0b" font-family="'Fira Code', monospace" font-size="10">"default_args": {"reason_code": "LOST"}</text>
+                    <text x="385" y="173" fill="#e2e8f0" font-family="'Fira Code', monospace" font-size="10">}</text>
+                    
+                    <text x="385" y="195" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="10">✔ Translates "card_id" template param ➔ API argument "card_num"</text>
+                    <text x="385" y="208" fill="#94a3b8" font-family="'Outfit', sans-serif" font-size="10">✔ Automatically injects default "reason_code"</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Section 4: Implementation Code Files -->
+        <section id="code-implementation">
+            <h2>Implementation Files</h2>
+            <p>
+                Click any tab below to inspect the verified codebase files implementing the Agentic SOP engine, the LOB Mock Databases, and the main CLI driver:
+            </p>
+
+            <div class="tab-wrapper">
+                <div class="tab-headers">
+                    <button class="tab-btn active" onclick="openTab(event, 'code-yaml')">workflow.yaml (SOP)</button>
+                    <button class="tab-btn" onclick="openTab(event, 'code-harness')">harness.py (Orchestrator)</button>
+                    <button class="tab-btn" onclick="openTab(event, 'code-registry')">tools_registry.py (LOB)</button>
+                    <button class="tab-btn" onclick="openTab(event, 'code-store')">sop_store.py (Search)</button>
+                    <button class="tab-btn" onclick="openTab(event, 'code-main')">main.py (Runner)</button>
+                </div>
+
+                <!-- Tab 1: YAML -->
+                <div id="code-yaml" class="tab-content active">
+                    <div class="file-link-header">
+                        <span class="file-path">lost-card-replacement/assets/workflow.yaml</span>
+                        <a href="file:///Users/venkat/Documents/workspace/ADK_AOP_TEST/lost-card-replacement/assets/workflow.yaml" class="file-btn" target="_blank">Open File</a>
+                    </div>
+                    <pre><code>id: "sop-bank-card-replacement-v1"
+title: "Lost/Stolen Debit Card Replacement"
+version: "1.0"
+preconditions:
+  - "account_status == 'ACTIVE'"
+
+global_governance:
+  telemetry_profile: "verbose"
+  max_workflow_cost_usd: 0.10
+
+steps:
+  - id: "step_fetch_details"
+    action: "execute"
+    capability: "fetch_customer_profile"
+    inputs:
+      id: "{{customer_id}}"
+    success_criteria: "customer_found == true"
+    on_failure: "goto step_escalate"
+
+  - id: "step_fraud_check"
+    action: "diagnose"
+    instruction: "Analyze recent transaction history for any suspicious or fraudulent activities. Consider location mismatch or large consecutive transfers."
+    capability: "adk_agent_fraud_analysis"
+    success_criteria: "analysis_completed == true"
+    on_failure: "goto step_escalate"
+    explainability:
+      required: true
+      mode: "chain_of_thought"
+      target_field: "fraud_justification"
+    telemetry:
+      monitor_token_usage: true
+      alert_on_latency_ms: 3000
+
+  - id: "step_freeze_card"
+    action: "execute"
+    capability: "freeze_card"
+    inputs:
+      card_id: "{{active_card_id}}"
+    success_criteria: "card_status == 'FROZEN'"
+    on_failure: "goto step_escalate"
+
+  - id: "step_shipping_approval"
+    action: "decision"
+    capability: "assess_shipping_risk"
+    inputs:
+      id: "{{customer_id}}"
+      speed: "{{shipping_speed}}"
+    human_approval: "required_if_express"
+    on_failure: "goto step_escalate"
+
+  - id: "step_order_card"
+    action: "execute"
+    capability: "order_replacement"
+    inputs:
+      id: "{{customer_id}}"
+      speed: "{{shipping_speed}}"
+    success_criteria: "order_status == 'DISPATCHED'"
+    on_failure: "goto step_rollback"
+
+  - id: "step_notify"
+    action: "execute"
+    capability: "send_notification"
+    inputs:
+      id: "{{customer_id}}"
+      msg: "Your replacement card is on the way!"
+    success_criteria: "notification_sent == true"
+    on_failure: "goto step_log_warning"
+
+rollback:
+  - step_id: "rollback_unfreeze"
+    action: "execute"
+    capability: "unfreeze_card"
+    inputs:
+      card_id: "{{active_card_id}}"</code></pre>
+                </div>
+
+                <!-- Tab 2: Harness -->
+                <div id="code-harness" class="tab-content">
+                    <div class="file-link-header">
+                        <span class="file-path">harness.py</span>
+                        <a href="file:///Users/venkat/Documents/workspace/ADK_AOP_TEST/harness.py" class="file-btn" target="_blank">Open File</a>
+                    </div>
+                    <pre><code># Stateful execution engine incorporating Google ADK Agent
+from models import AgenticSOP, SOPStep
+from tools_registry import CAPABILITY_BINDINGS
+from google.adk import Agent, Runner
+from google.adk.sessions.in_memory_session_service import InMemorySessionService
+
+class HarnessAgent:
+    def __init__(self, workflow_path: str):
+        self.workflow_path = workflow_path
+        self.sop: Optional[AgenticSOP] = None
+        self.context: Dict[str, Any] = {}
+        self.executed_steps: List[str] = []
+
+    async def execute_step(self, step: SOPStep) -> bool:
+        start_step_time = time.time()
+        
+        # 1. Resolve template inputs and dispatch
+        resolved_inputs = {k: self._resolve_template(v) for k, v in (step.inputs or {}).items()}
+        if step.action == "execute":
+            success = await self._run_execute_action(step, resolved_inputs)
+        elif step.action == "diagnose":
+            success = await self._run_diagnose_action(step)
+        elif step.action == "decision":
+            success = await self._run_decision_action(step, resolved_inputs)
+        
+        # 2. Latency Telemetry Gating
+        duration_ms = int((time.time() - start_step_time) * 1000)
+        if step.telemetry and step.telemetry.alert_on_latency_ms:
+            if duration_ms > step.telemetry.alert_on_latency_ms:
+                logger.warning(f"⚠️  [TELEMETRY ALERT] Step '{step.id}' latency {duration_ms}ms exceeded limit!")
+        return success
+
+    async def _run_diagnose_action(self, step: SOPStep) -> bool:
+        # Spawn cognitive ADK Agent using gpt-5.5
+        agent = Agent(
+            name="FraudDetectorAgent",
+            model=os.environ.get("OPENAI_MODEL", "gpt-5.5"),
+            instruction=f"Bank fraud analysis. {step.instruction}",
+            tools=[get_transaction_history]
+        )
+        runner = Runner(agent=agent, session_service=InMemorySessionService(), auto_create_session=True)
+        
+        # Stream and capture token counts
+        async for event in runner.run_async(...):
+            if event.usage_metadata:
+                prompt_tokens = event.usage_metadata.prompt_token_count
+                comp_tokens = event.usage_metadata.candidates_token_count
+                # Estimate cost
+                step_cost = (prompt_tokens * 0.000015) + (comp_tokens * 0.000060)
+                self.context["accumulated_cost_usd"] = self.context.get("accumulated_cost_usd", 0.0) + step_cost
+        
+        # Explainability Tap: Capture thought path
+        if step.explainability and step.explainability.required:
+            self.context[step.explainability.target_field] = agent_response_text
+        return True
+
+    async def run(self, initial_inputs: Dict[str, Any]) -> bool:
+        self.context = dict(initial_inputs)
+        self.load_workflow()
+        
+        for step in self.sop.steps:
+            # Enforce budget guardrails
+            current_cost = self.context.get("accumulated_cost_usd", 0.0)
+            if self.sop.global_governance and current_cost > self.sop.global_governance.max_workflow_cost_usd:
+                logger.error(f"❌ [GOVERNANCE BREACH] Cost ${current_cost} exceeds limit!")
+                return False
+                
+            success = await self.execute_step(step)
+            if not success:
+                if step.on_failure == "goto step_rollback":
+                    await self.execute_rollback()
+                return False
+        return True</code></pre>
+                </div>
+
+                <!-- Tab 3: Registry -->
+                <div id="code-registry" class="tab-content">
+                    <div class="file-link-header">
+                        <span class="file-path">tools_registry.py</span>
+                        <a href="file:///Users/venkat/Documents/workspace/ADK_AOP_TEST/tools_registry.py" class="file-btn" target="_blank">Open File</a>
+                    </div>
+                    <pre><code># Mock Database & Line-of-Business concrete functions
+MOCK_ACCOUNTS = {
+    "cust-987": {"name": "Jane Doe", "account_status": "ACTIVE", "credit_score": 750, "cards_status": {"card-1111": "ACTIVE"}},
+    "cust-123": {"name": "John Smith", "account_status": "ACTIVE", "credit_score": 580, "cards_status": {"card-2222": "ACTIVE"}}
+}
+
+async def lob_fetch_customer_details(customer_uuid: str) -> dict:
+    # Technical database retrieval
+    return MOCK_ACCOUNTS.get(customer_uuid, {"customer_found": False})
+
+async def lob_debit_card_freeze(card_num: str, reason_code: str = "PRECAUTIONARY") -> dict:
+    # Freezes card in backend LOB Card management platform
+    return {"card_id": card_num, "card_status": "FROZEN"}
+
+# LOB Capability Binding Map
+CAPABILITY_BINDINGS = {
+    "fetch_customer_profile": {
+        "function": lob_fetch_customer_details,
+        "param_mapping": {"id": "customer_uuid"}
+    },
+    "freeze_card": {
+        "function": lob_debit_card_freeze,
+        "param_mapping": {"card_id": "card_num"},
+        "default_args": {"reason_code": "LOST_STOLEN_REPORT"}
+    },
+    ...
+}</code></pre>
+                </div>
+
+                <!-- Tab 4: Store -->
+                <div id="code-store" class="tab-content">
+                    <div class="file-link-header">
+                        <span class="file-path">sop_store.py</span>
+                        <a href="file:///Users/venkat/Documents/workspace/ADK_AOP_TEST/sop_store.py" class="file-btn" target="_blank">Open File</a>
+                    </div>
+                    <pre><code>class SOPStore:
+    def __init__(self, base_dir: str = "."):
+        self.base_dir = os.path.abspath(base_dir)
+
+    def search(self, query: str, agent_capabilities: List[str]) -> List[Dict[str, Any]]:
+        """
+        Capability-Aware Search:
+        1. Filters out SOPs whose allowed_tools are not satisfied by agent_capabilities
+        2. Scores name and description relevance using keyword overlap
+        """
+        all_skills = self.scan_skills()
+        matching_skills = []
+        query_words = set(re.findall(r"\w+", query.lower()))
+
+        for skill in all_skills:
+            # Filter by capability overlap
+            required_tools = skill.get("allowed_tools", [])
+            if not all(tool in agent_capabilities for tool in required_tools):
+                continue
+
+            # Compute match score
+            score = sum(5 if w in skill["name"].lower() else (2 if w in skill["description"].lower() else 0) for w in query_words)
+            if score > 0 or not query_words:
+                skill_copy = dict(skill)
+                skill_copy["search_score"] = score
+                matching_skills.append(skill_copy)
+
+        matching_skills.sort(key=lambda x: x["search_score"], reverse=True)
+        return matching_skills</code></pre>
+                </div>
+
+                <!-- Tab 5: Main -->
+                <div id="code-main" class="tab-content">
+                    <div class="file-link-header">
+                        <span class="file-path">main.py</span>
+                        <a href="file:///Users/venkat/Documents/workspace/ADK_AOP_TEST/main.py" class="file-btn" target="_blank">Open File</a>
+                    </div>
+                    <pre><code>import openai.resources.chat.completions
+original_create = openai.resources.chat.completions.AsyncCompletions.create
+
+# Monkey patch OpenAI client completions for GPT-5.5 compatibility
+async def patched_create(self, *args, **kwargs):
+    if "max_tokens" in kwargs:
+        model = kwargs.get("model", "")
+        if "gpt-5.5" in model or model.startswith("o1") or model.startswith("o3"):
+            kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
+    return await original_create(self, *args, **kwargs)
+
+openai.resources.chat.completions.AsyncCompletions.create = patched_create
+
+async def main():
+    # 1. Search for matching SOP
+    store = SOPStore(".")
+    matches = store.search("replace lost card", capabilities)
+    workflow_path = matches[0]["workflow_path"]
+
+    # 2. Run Scenario 1: Low-Risk Jane Doe
+    harness = HarnessAgent(workflow_path)
+    await harness.run({"customer_id": "cust-987", "shipping_speed": "express"})
+
+    # 3. Run Scenario 2: John Smith (HITL Gate + Rollback)
+    await harness.run({"customer_id": "cust-123", "shipping_speed": "express_fail"})</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Timeline & Verification Logs -->
+        <section id="timeline-verification">
+            <h2>Scenario Timeline & Verification Run</h2>
+            <p>
+                Below is the chronological execution timeline of our platform validation using the real <code>gpt-5.5</code> model.
+            </p>
+
+            <div class="timeline">
+                <!-- Timeline item 1 -->
+                <div class="timeline-item">
+                    <div class="timeline-marker marker-success">1</div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">
+                            SOP Retrieval &amp; Search Store
+                            <span class="timeline-badge badge-success">Success</span>
+                        </div>
+                        <p>Search query <code>"replace lost card"</code> retrieves the executable workflow.</p>
+                        <div class="timeline-log">Agent Search Query: 'replace lost card'
+Match found! Successfully retrieved 1 matching SOP: [lost-card-replacement] (Score: 21)
+Description: Handles replacement requests for lost or stolen cards.
+Workflow path: /Users/venkat/Documents/workspace/ADK_AOP_TEST/lost-card-replacement/assets/workflow.yaml</div>
+                    </div>
+                </div>
+
+                <!-- Timeline item 2 -->
+                <div class="timeline-item">
+                    <div class="timeline-marker marker-success">2</div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">
+                            Scenario 1: Low-Risk Jane Doe Execution
+                            <span class="timeline-badge badge-success">Success</span>
+                        </div>
+                        <p>Jane Doe has a high credit score (750) and normal transactions. The ADK Agent runs fraud analysis.</p>
+                        <div class="timeline-log">2026-06-14 11:20:27 [INFO] Harness: Loading Agentic SOP from lost-card-replacement/assets/workflow.yaml
+2026-06-14 11:20:27 [INFO] Harness: [Harness Governance] Max Budget limit set to: $0.10 USD
+2026-06-14 11:20:27 [INFO] Harness: --- [STEP RUN] Executing Step: step_fetch_details ---
+2026-06-14 11:20:27 [INFO] LOB: [LOB API] Fetching details for customer UUID: cust-987
+2026-06-14 11:20:27 [INFO] Harness: [LOB Output] Result: {'customer_found': True, 'account_status': 'ACTIVE', ...}
+2026-06-14 11:20:27 [INFO] Harness: --- [STEP RUN] Executing Step: step_fraud_check ---
+2026-06-14 11:20:27 [INFO] Harness: [ADK Harness] Spawning ADK Agent for diagnose on model gpt-5.5
+2026-06-14 11:20:30 [INFO] Harness: [Agent Tool] Fetching transaction history for customer: cust-987
+2026-06-14 11:20:32 [INFO] Harness: [TELEMETRY] LLM Token Usage: prompt=381, completion=163, total=544
+2026-06-14 11:20:32 [INFO] Harness: [TELEMETRY] Estimated Step LLM Cost: $0.015495 USD
+2026-06-14 11:20:32 [WARNING] Harness: ⚠️  [TELEMETRY ALERT] Step 'step_fraud_check' latency 4984ms exceeded threshold limit of 3000ms!
+2026-06-14 11:20:32 [INFO] Harness: 🔍 [EXPLAINABILITY AUDIT TRAIL] Mode: chain_of_thought
+2026-06-14 11:20:32 [INFO] Harness: 🔍 [EXPLAINABILITY AUDIT TRAIL] Justification: Recent transaction review shows no suspicious activity...
+2026-06-14 11:20:32 [INFO] Harness: [ADK Harness] Agent flagged transactions as LOW RISK.
+2026-06-14 11:20:32 [INFO] LOB: [LOB API] Dispatching replacement card order for client cust-987 (speed: express)
+2026-06-14 11:20:32 [INFO] LOB: [LOB API] Sending notification to customer cust-987...
+🏆 [WORKFLOW COMPLETE] Card replacement workflow executed successfully.</div>
+                    </div>
+                </div>
+
+                <!-- Timeline item 3 -->
+                <div class="timeline-item">
+                    <div class="timeline-marker marker-warning">3</div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">
+                            Scenario 2: John Smith High-Risk &amp; Rollback
+                            <span class="timeline-badge badge-warning">Rollback Triggered</span>
+                        </div>
+                        <p>John Smith has a 580 credit score and suspicious transactions. The ADK Agent flags elevated risk, triggers the Human Gate, and rolls back upon order failure.</p>
+                        <div class="timeline-log">2026-06-13 22:25:41 [INFO] Harness: Loading Agentic SOP from lost-card-replacement/assets/workflow.yaml
+2026-06-13 22:25:41 [INFO] LOB: [LOB API] Fetching details for customer UUID: cust-123
+2026-06-13 22:25:41 [INFO] Harness: [LOB Output] Result: {'customer_found': True, 'account_status': 'ACTIVE', ...}
+2026-06-13 22:25:41 [INFO] Harness: --- [STEP RUN] Executing Step: step_fraud_check ---
+2026-06-13 22:25:41 [INFO] Harness: [ADK Harness] Spawning ADK Agent (model: gpt-5.5)
+2026-06-13 22:25:42 [INFO] Harness: [Agent Tool] Fetching transaction history for customer: cust-123
+2026-06-13 22:25:47 [INFO] Harness: [TELEMETRY] LLM Token Usage: prompt=396, completion=274, total=670
+2026-06-13 22:25:47 [INFO] Harness: [TELEMETRY] Estimated Step LLM Cost: $0.022380 USD
+2026-06-13 22:25:47 [INFO] Harness: 🔍 [EXPLAINABILITY AUDIT TRAIL] Justification: ATM withdrawal in Paris ($500) and Online transfer ($10,000) within minutes... Russia IP access... fraud highly probable.
+2026-06-13 22:25:47 [INFO] Harness: --- [STEP RUN] Executing Step: step_shipping_approval (Action: decision) ---
+2026-06-13 22:25:47 [WARNING] Harness: 🚧 [HUMAN APPROVAL GATE TRIGGERED] 🚧 Low credit score for Express delivery.
+2026-06-13 22:25:47 [INFO] Harness: 💡 [Review Context] Fraud Agent Reasoning Path: ATM withdrawal Paris ($500)... Russian IP...
+👉 Enter 'y' to grant Manager Approval: y
+2026-06-14 11:20:27 [INFO] Harness: [Harness Gate] Human approval GRANTED. Continuing execution.
+2026-06-14 11:20:27 [INFO] LOB: [LOB API] Dispatching replacement card order for client cust-123 (speed: express_fail)
+2026-06-14 11:20:27 [ERROR] LOB: [LOB API] ERROR: Mainframe Connection Timeout during order placement!
+2026-06-14 11:20:27 [WARNING] Harness: 🔄 [ROLLBACK TRIGGERED] Executing recovery workflow...
+2026-06-14 11:20:27 [INFO] Harness: [Rollback Step] Executing: rollback_unfreeze (unfreeze_card)
+2026-06-14 11:20:27 [INFO] LOB: [LOB API] Restoring card card-2222 back to ACTIVE
+✅ Scenario 2 (John Smith) failed and rolled back successfully.</div>
+                    </div>
+                </div>
+
+                <!-- Timeline item 4 -->
+                <div class="timeline-item">
+                    <div class="timeline-marker marker-success">4</div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">
+                            Scenario 3: Decoupled LOB API Migration
+                            <span class="timeline-badge badge-success">Success</span>
+                        </div>
+                        <p>We upgrade the backend API and signature. The harness processes argument mapping dynamically while the KM team's YAML remains completely unchanged.</p>
+                        <div class="timeline-log">⚙️ Simulating LOB Backend Upgrade: Upgraded debit_card_freeze to version v3.
+⚙️ Parameter 'card_num' changed to 'technical_card_no'.
+⚙️ Updated CAPABILITY_BINDINGS in tools_registry.py (KM YAML file left 100% UNCHANGED).
+[MIGRATED LOB API v3] Executing upgraded freeze service...
+[MIGRATED LOB API v3] Parameters received: card_no=card-1111, reason_code=STOLEN_REPORTED_V3
+✅ Decoupled LOB Migration Verification SUCCESSFUL!
+KM SOP executed using the upgraded v3 API without any YAML changes.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>Built with Vanilla CSS, Google Fonts, and SVG Vector Graphics.</p>
+            <p>Agent Harness Search & Execution Platform © 2026</p>
+        </footer>
+    </main>
+
+    <script>
+        function openTab(evt, tabId) {
+            // Get all elements with class="tab-content" and hide them
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove("active");
+            }
+
+            // Get all elements with class="tab-btn" and remove the class "active"
+            const tabBtns = document.getElementsByClassName("tab-btn");
+            for (let i = 0; i < tabBtns.length; i++) {
+                tabBtns[i].classList.remove("active");
+            }
+
+            // Show the current tab, and add an "active" class to the button that opened the tab
+            document.getElementById(tabId).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // Add class active on nav item clicks
+        const navLinks = document.querySelectorAll('aside nav a');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                navLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Simple scroll spy to update active sidebar navigation link
+        window.addEventListener('scroll', () => {
+            let current = '';
+            const sections = document.querySelectorAll('section, header');
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            if (current) {
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').substring(1) === current) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

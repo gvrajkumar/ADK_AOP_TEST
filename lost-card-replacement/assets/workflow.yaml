@@ -1,0 +1,74 @@
+id: "sop-bank-card-replacement-v1"
+title: "Lost/Stolen Debit Card Replacement"
+version: "1.0"
+preconditions:
+  - "account_status == 'ACTIVE'"
+
+global_governance:
+  telemetry_profile: "verbose"
+  max_workflow_cost_usd: 0.10
+
+steps:
+  - id: "step_fetch_details"
+    action: "execute"
+    capability: "fetch_customer_profile"
+    inputs:
+      id: "{{customer_id}}"
+    success_criteria: "customer_found == true"
+    on_failure: "goto step_escalate"
+
+  - id: "step_fraud_check"
+    action: "diagnose"
+    instruction: "Analyze recent transaction history for any suspicious or fraudulent activities. Consider location mismatch or large consecutive transfers."
+    capability: "adk_agent_fraud_analysis"
+    success_criteria: "analysis_completed == true"
+    on_failure: "goto step_escalate"
+    explainability:
+      required: true
+      mode: "chain_of_thought"
+      target_field: "fraud_justification"
+    telemetry:
+      monitor_token_usage: true
+      alert_on_latency_ms: 3000
+
+  - id: "step_freeze_card"
+    action: "execute"
+    capability: "freeze_card"
+    inputs:
+      card_id: "{{active_card_id}}"
+    success_criteria: "card_status == 'FROZEN'"
+    on_failure: "goto step_escalate"
+
+  - id: "step_shipping_approval"
+    action: "decision"
+    capability: "assess_shipping_risk"
+    inputs:
+      id: "{{customer_id}}"
+      speed: "{{shipping_speed}}"
+    human_approval: "required_if_express"
+    on_failure: "goto step_escalate"
+
+  - id: "step_order_card"
+    action: "execute"
+    capability: "order_replacement"
+    inputs:
+      id: "{{customer_id}}"
+      speed: "{{shipping_speed}}"
+    success_criteria: "order_status == 'DISPATCHED'"
+    on_failure: "goto step_rollback"
+
+  - id: "step_notify"
+    action: "execute"
+    capability: "send_notification"
+    inputs:
+      id: "{{customer_id}}"
+      msg: "Your replacement card is on the way!"
+    success_criteria: "notification_sent == true"
+    on_failure: "goto step_log_warning"
+
+rollback:
+  - step_id: "rollback_unfreeze"
+    action: "execute"
+    capability: "unfreeze_card"
+    inputs:
+      card_id: "{{active_card_id}}"
