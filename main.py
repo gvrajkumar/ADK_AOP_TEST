@@ -5,12 +5,40 @@ import openai.resources.chat.completions
 original_create = openai.resources.chat.completions.AsyncCompletions.create
 
 async def patched_create(self, *args, **kwargs):
+    # Log details of the outgoing request
+    print("\n--- Outgoing LLM Request ---")
+    print(f"Model: {kwargs.get('model')}")
+    print("Messages:")
+    for msg in kwargs.get("messages", []):
+        role = msg.get("role")
+        content = msg.get("content")
+        print(f"  [{role.upper()}]: {content}")
+    if "tools" in kwargs:
+        print(f"  Tools available: {[t.get('function', {}).get('name') for t in kwargs['tools']]}")
+    
     if "max_tokens" in kwargs:
         model = kwargs.get("model", "")
         if "gpt-5.5" in model or model.startswith("o1") or model.startswith("o3"):
             # Map max_tokens to max_completion_tokens for newer/reasoning models
             kwargs["max_completion_tokens"] = kwargs.pop("max_tokens")
-    return await original_create(self, *args, **kwargs)
+            
+    response = await original_create(self, *args, **kwargs)
+    
+    # Log details of the incoming response
+    print("\n--- Incoming LLM Response ---")
+    if hasattr(response, "choices") and response.choices:
+        choice = response.choices[0]
+        message = choice.message
+        print(f"  Role: {message.role}")
+        if message.content:
+            print(f"  Content: {message.content}")
+        if message.tool_calls:
+            for tc in message.tool_calls:
+                print(f"  Tool Call: {tc.function.name} with args: {tc.function.arguments}")
+    if hasattr(response, "usage") and response.usage:
+        print(f"  Usage: prompt_tokens={response.usage.prompt_tokens}, completion_tokens={response.usage.completion_tokens}")
+    print("-----------------------------\n")
+    return response
 
 openai.resources.chat.completions.AsyncCompletions.create = patched_create
 
